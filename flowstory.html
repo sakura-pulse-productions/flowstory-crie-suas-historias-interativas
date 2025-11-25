@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowStory - Editor de Histórias</title>
+    <meta name="theme-color" content="#6A5ACD">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6A5ACD;
+            --primary-light: #9370DB;
+            --background: linear-gradient(135deg, #E6E6FA, #F0F8FF, #F5F0FF);
+            --lilac-light: #F0E6FF;
+            --orange-light: #FFF0E0;
+            --orange-strong: #FFE0B2;
+            --yellow-light: #FFFDE0;
+            --pink-light: #FFE0F0;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --error: #F44336;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--background);
+            min-height: 100vh;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--background);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--primary-light);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* App Container */
+        .app-container {
+            max-width: 100%;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: var(--primary-light);
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Menu Grid */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .menu-item {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .menu-item:active {
+            transform: scale(0.95);
+        }
+
+        .menu-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            background: white;
+            border-radius: 15px;
+            margin: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--primary-light);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            min-height: 200px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Bolhas */
+        .bubbles-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .bubble-item {
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: grab;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            user-select: none;
+        }
+
+        .bubble-item:active {
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
+
+        .bubble-item small {
+            display: block;
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        /* Cores das bolhas */
+        #skeleton { 
+            background: var(--lilac-light); 
+        }
+        #skeleton .bubble-item {
+            background: #D8BFD8;
+            border-left: 4px solid #6A5ACD;
+        }
+
+        #appearance { 
+            background: var(--orange-light); 
+        }
+        #appearance .bubble-item {
+            background: #FFDAB9;
+            border-left: 4px solid #FF9800;
+        }
+
+        #child-bubbles { 
+            background: var(--orange-strong); 
+        }
+        #child-bubbles .bubble-item {
+            background: #FFB74D;
+            border-left: 4px solid #FF5722;
+        }
+
+        #scenes { 
+            background: var(--pink-light); 
+        }
+        #scenes .bubble-item {
+            background: #F8BBD0;
+            border-left: 4px solid #E91E63;
+        }
+
+        /* Workspace */
+        .workspace-container {
+            padding: 20px;
+        }
+
+        .workspace {
+            background: rgba(245, 240, 255, 0.5);
+            border: 2px dashed var(--primary-light);
+            border-radius: 15px;
+            padding: 30px;
+            min-height: 200px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .workspace.drag-over {
+            background: rgba(147, 112, 219, 0.2);
+            border-color: var(--primary-color);
+        }
+
+        .workspace-placeholder {
+            text-align: center;
+            color: var(--primary-light);
+            font-style: italic;
+        }
+
+        .workspace-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Botões */
+        .btn-primary, .btn-secondary, .btn-success {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 44px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .back-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        /* Editor Header */
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.9);
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Status */
+        .pwa-status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .status {
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            background: rgba(255,255,255,0.8);
+        }
+
+        .online { color: var(--success); }
+        .offline { color: var(--error); }
+
+        /* Tela de Login */
+        .login-form {
+            background: white;
+            padding: 30px;
+            margin: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        /* Biblioteca */
+        .stories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .story-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+
+        .story-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Carregando FlowStory...</p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app-container hidden">
+        <!-- Menu Principal -->
+        <div id="main-menu" class="screen active">
+            <div class="header">
+                <h1>FlowStory</h1>
+                <p>Crie suas histórias interativas</p>
+                <div class="user-info" id="user-info">
+                    <span id="user-name">Visitante</span>
+                    <button onclick="showScreen('login')" class="btn-primary" style="padding: 8px 15px; font-size: 12px;">Entrar</button>
+                </div>
+            </div>
+            
+            <div class="menu-grid">
+                <div class="menu-item" onclick="showScreen('editor')">
+                    <div class="menu-icon">✏️</div>
+                    <span>Editor de História</span>
+                </div>
+                
+                <div class="menu-item" onclick="showScreen('profiles')">
+                    <div class="menu-icon">👥</div>
+                    <span>Sistema de Perfis</span>
+                </div>
+                
+                <div class="menu-item" onclick="showScreen('workspace')">
+                    <div class="menu-icon">💼</div>
+                    <span>Mesa de Trabalho</span>
+                </div>
+                
+                <div class="menu-item" onclick="showScreen('library')">
+                    <div class="menu-icon">📚</div>
+                    <span>Biblioteca</span>
+                </div>
+                
+                <div class="menu-item" onclick="showScreen('settings')">
+                    <div class="menu-icon">⚙️</div>
+                    <span>Configurações</span>
+                </div>
+                
+                <div class="menu-item" onclick="showScreen('export')">
+                    <div class="menu-icon">📤</div>
+                    <span>Exportar</span>
+                </div>
+            </div>
+
+            <!-- Status PWA -->
+            <div class="pwa-status">
+                <div id="online-status" class="status online">● Online</div>
+                <div class="status">💾 <span id="storage-used">0KB</span> usado</div>
+            </div>
+        </div>
+
+        <!-- Editor de História -->
+        <div id="editor" class="screen">
+            <div class="editor-header">
+                <button class="back-btn" onclick="showScreen('main-menu')">← Voltar</button>
+                <h2>Editor de História</h2>
+                <div class="editor-actions">
+                    <button onclick="saveStory()" class="btn-primary">💾 Salvar</button>
+                    <button onclick="showPreview()" class="btn-secondary">👁️ Preview</button>
+                </div>
+            </div>
+            
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="openTab('skeleton')">🧩 Esqueleto</button>
+                    <button class="tab-btn" onclick="openTab('appearance')">🎨 Aparência</button>
+                    <button class="tab-btn" onclick="openTab('child-bubbles')">👶 Bolhas</button>
+                    <button class="tab-btn" onclick="openTab('scenes')">🎬 Cenas</button>
+                </div>
+                
+                <div id="skeleton" class="tab-content active">
+                    <h3 style="margin-bottom: 15px; color: #6A5ACD;">Estrutura da História</h3>
+                    <div class="bubbles-grid">
+                        <div class="bubble-item" draggable="true" data-type="if">
+                            <span>SE</span>
+                            <small>Condição lógica</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="context">
+                            <span>CONTEXTO</span>
+                            <small>Ambientação</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="then">
+                            <span>ENTÃO</span>
+                            <small>Ação principal</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="else">
+                            <span>SENÃO</span>
+                            <small>Alternativa</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="appearance" class="tab-content">
+                    <h3 style="margin-bottom: 15px; color: #FF9800;">Aparência e Visual</h3>
+                    <div class="bubbles-grid">
+                        <div class="bubble-item" draggable="true" data-type="move-character">
+                            <span>Mover Personagem</span>
+                            <small>Posicionar na tela</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="change-focus">
+                            <span>Mudar Foco</span>
+                            <small>Destacar elemento</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="scenario">
+                            <span>Cenário</span>
+                            <small>Alterar fundo</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="hide-character">
+                            <span>Esconder Personagem</span>
+                            <small>Remover da cena</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="child-bubbles" class="tab-content">
+                    <h3 style="margin-bottom: 15px; color: #FF5722;">Bolhas Filhas</h3>
+                    <div class="bubbles-grid">
+                        <div class="bubble-item" draggable="true" data-type="character">
+                            <span>Personagem()</span>
+                            <small>Adicionar personagem</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="scenario-config">
+                            <span>Cenário()</span>
+                            <small>Configurar ambiente</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="change-expression">
+                            <span>Mudar Expressão</span>
+                            <small>Alterar emoção</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="bring-character">
+                            <span>Trazer Personagem</span>
+                            <small>Adicionar à cena</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="scenes" class="tab-content">
+                    <h3 style="margin-bottom: 15px; color: #E91E63;">Cenas e Transições</h3>
+                    <div class="bubbles-grid">
+                        <div class="bubble-item" draggable="true" data-type="new-chapter">
+                            <span>Novo Capítulo</span>
+                            <small>Iniciar nova parte</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="create-route">
+                            <span>Criar Rota</span>
+                            <small>Definir caminhos</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="dialogue">
+                            <span>Diálogo</span>
+                            <small>Conversa entre personagens</small>
+                        </div>
+                        <div class="bubble-item" draggable="true" data-type="stop-all">
+                            <span>Parar Tudo</span>
+                            <small>Finalizar cena</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Área de Trabalho -->
+            <div class="workspace-container">
+                <h3>Mesa de Trabalho</h3>
+                <div id="workspace-area" class="workspace">
+                    <p class="workspace-placeholder">Arraste as bolhas para esta área</p>
+                </div>
+                
+                <div class="workspace-actions">
+                    <button onclick="clearWorkspace()" class="btn-secondary">🗑️ Limpar</button>
+                    <button onclick="testStory()" class="btn-primary">▶️ Testar</button>
+                    <button onclick="exportStory()" class="btn-success">📤 Exportar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sistema de Perfis -->
+        <div id="profiles" class="screen">
+            <div class="header">
+                <button class="back-btn" onclick="showScreen('main-menu')">← Voltar</button>
+                <h2>Sistema de Perfis</h2>
+            </div>
+            
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="openProfileTab('my-bank')">Sua Banca</button>
+                    <button class="tab-btn" onclick="openProfileTab('explore')">Explorar</button>
+                </div>
+                
+                <div id="my-bank" class="tab-content active">
+                    <div style="padding: 20px;">
+                        <div class="profile-card" style="background: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 20px;">
+                            <div style="font-size: 3em;">👤</div>
+                            <h3>Seu Nick</h3>
+                            <p style="color: #666;">Sua banca pessoal</p>
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Suas Histórias</div>
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Bate Papo</div>
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Atualizações</div>
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Wikis</div>
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Quiz</div>
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Grupos</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="explore" class="tab-content">
+                    <div style="padding: 20px;">
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Histórias de Outras Autoras</div>
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Jams e Competições</div>
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Fanfics e Histórias Escritas</div>
+                            <div class="menu-item" style="text-align: left; padding: 15px;">Wikis da Comunidade</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Biblioteca -->
+        <div id="library" class="screen">
+            <div class="header">
+                <button class="back-btn" onclick="showScreen('main-menu')">← Voltar</button>
+                <h2>Biblioteca</h2>
+            </div>
+            
+            <div class="stories-grid">
+                <div class="story-card" onclick="openStory('1')">
+                    <div class="story-icon">📖</div>
+                    <div>Nova Aventura</div>
+                    <small>Criada hoje</small>
+                </div>
+                <div class="story-card" onclick="openStory('2')">
+                    <div class="story-icon">🎭</div>
+                    <div>Drama Familiar</div>
+                    <small>2 dias atrás</small>
+                </div>
+                <div class="story-card" onclick="createNewStory()">
+                    <div class="story-icon">➕</div>
+                    <div>Nova História</div>
+                    <small>Criar</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login -->
+        <div id="login" class="screen">
+            <div class="header">
+                <button class="back-btn" onclick="showScreen('main-menu')">← Voltar</button>
+                <h2>Entrar na Flow</h2>
+            </div>
+            
+            <div class="login-form">
+                <div class="form-group">
+                    <label>Nick ou Email:</label>
+                    <input type="text" id="login-username" placeholder="seu_nick_ou_email">
+                </div>
+                
+                <div class="form-group">
+                    <label>Senha ou Código:</label>
+                    <input type="password" id="login-password" placeholder="sua_senha_ou_codigo">
+                </div>
+                
+                <button onclick="doLogin()" class="btn-primary" style="width: 100%;">Entrar na Flow</button>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="showScreen('invite')" class="btn-secondary">Não tem conta? Convide-se</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Convite -->
+        <div id="invite" class="screen">
+            <div class="header">
+                <button class="back-btn" onclick="showScreen('login')">← Voltar</button>
+                <h2>Convite-se para a Flow</h2>
+            </div>
+            
+            <div class="login-form">
+                <div class="form-group">
+                    <label>Nick desejado:</label>
+                    <input type="text" id="invite-nick" placeholder="seu_nick_desejado">
+                </div>
+                
+                <div class="form-group">
+                    <label>Senha:</label>
+                    <input type="password" id="invite-password" placeholder="sua_senha">
+                </div>
+                
+                <div class="form-group">
+                    <label>Email (para código único):</label>
+                    <input type="email" id="invite-email" placeholder="seu_email@exemplo.com">
+                </div>
+                
+                <button onclick="doInvite()" class="btn-success" style="width: 100%;">Receber Convite</button>
+                
+                <div style="text-align: center; margin-top: 15px; font-size: 0.9em; color: #666;">
+                    O convite será enviado em 1 segundo para seu email
+                </div>
+            </div>
+        </div>
+
+        <!-- Exportar -->
+        <div id="export" class="screen">
+            <div class="header">
+                <button class="back-btn" onclick="showScreen('main-menu')">← Voltar</button>
+                <h2>Exportar Projeto</h2>
+            </div>
+            
+            <div style="padding: 20px;">
+                <div class="menu-item" onclick="exportHTML()" style="text-align: left; padding: 20px; margin-bottom: 15px;">
+                    <div style="font-size: 1.5em; margin-bottom: 10px;">🌐</div>
+                    <h3>Exportar HTML</h3>
+                    <p>HTML + CSS + JavaScript + JSON</p>
+                </div>
+                
+                <div class="menu-item" onclick="exportAPK()" style="text-align: left; padding: 20px; margin-bottom: 15px;">
+                    <div style="font-size: 1.5em; margin-bottom: 10px;">🤖</div>
+                    <h3>Exportar APK</h3>
+                    <p>Android (versões recentes)</p>
+                </div>
+                
+                <div class="menu-item" onclick="exportEXE()" style="text-align: left; padding: 20px; margin-bottom: 15px;">
+                    <div style="font-size: 1.5em; margin-bottom: 10px;">💻</div>
+                    <h3>Exportar EXE</h3>
+                    <p>Windows (32x, 64x, 86x)</p>
+                </div>
+                
+                <div class="menu-item" onclick="exportMP4()" style="text-align: left; padding: 20px;">
+                    <div style="font-size: 1.5em; margin-bottom: 10px;">🎬</div>
+                    <h3>Salvar como MP4</h3>
+                    <p>Webséries - YouTube/TikTok</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado global do aplicativo
+        const FlowStoryApp = {
+            state: {
+                currentUser: null,
+                isOnline: navigator.onLine,
+                stories: [],
+                currentStory: null,
+                autoSaveInterval: null
+            },
+
+            // Inicialização
+            init() {
+                console.log('🚀 Inicializando FlowStory...');
+                
+                // Esconder loading screen
+                this.hideLoading();
+                
+                // Configurar listeners
+                this.setupEventListeners();
+                
+                // Carregar dados
+                this.loadUserData();
+                this.loadStories();
+                
+                // Configurar drag and drop
+                this.setupDragAndDrop();
+                
+                // Iniciar auto-save
+                this.startAutoSave();
+                
+                console.log('✅ FlowStory inicializado');
+            },
+
+            hideLoading() {
+                setTimeout(() => {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('app').classList.remove('hidden');
+                }, 1500);
+            },
+
+            setupEventListeners() {
+                // Online/Offline
+                window.addEventListener('online', () => this.updateOnlineStatus(true));
+                window.addEventListener('offline', () => this.updateOnlineStatus(false));
+            },
+
+            updateOnlineStatus(online) {
+                this.state.isOnline = online;
+                const statusElement = document.getElementById('online-status');
+                
+                if (online) {
+                    statusElement.textContent = '● Online';
+                    statusElement.className = 'status online';
+                } else {
+                    statusElement.textContent = '● Offline';
+                    statusElement.className = 'status offline';
+                }
+            },
+
+            setupDragAndDrop() {
+                const bubbleItems = document.querySelectorAll('.bubble-item');
+                const workspace = document.getElementById('workspace-area');
+                
+                bubbleItems.forEach(item => {
+                    item.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', item.getAttribute('data-type'));
+                        setTimeout(() => item.classList.add('dragging'), 0);
+                    });
+                    
+                    item.addEventListener('dragend', () => {
+                        item.classList.remove('dragging');
+                    });
+                });
+                
+                workspace.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    workspace.classList.add('drag-over');
+                });
+                
+                workspace.addEventListener('dragleave', () => {
+                    workspace.classList.remove('drag-over');
+                });
+                
+                workspace.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    workspace.classList.remove('drag-over');
+                    
+                    const bubbleType = e.dataTransfer.getData('text/plain');
+                    this.addBubbleToWorkspace(bubbleType);
+                });
+            },
+
+            addBubbleToWorkspace(type) {
+                const workspace = document.getElementById('workspace-area');
+                const bubbleText = this.getBubbleText(type);
+                
+                // Remover placeholder se existir
+                const placeholder = workspace.querySelector('.workspace-placeholder');
+                if (placeholder) {
+                    placeholder.remove();
+                }
+                
+                const bubbleElement = document.createElement('div');
+                bubbleElement.className = 'bubble-item';
+                bubbleElement.innerHTML = `<span>${bubbleText}</span><small>Clique para editar</small>`;
+                bubbleElement.setAttribute('data-type', type);
+                bubbleElement.setAttribute('contenteditable', 'false');
+                
+                bubbleElement.addEventListener('click', () => {
+                    bubbleElement.setAttribute('contenteditable', 'true');
+                    bubbleElement.focus();
+                });
+                
+                bubbleElement.addEventListener('blur', () => {
+                    bubbleElement.setAttribute('contenteditable', 'false');
+                });
+                
+                workspace.appendChild(bubbleElement);
+                
+                // Animação de entrada
+                bubbleElement.style.transform = 'scale(0)';
+                setTimeout(() => {
+                    bubbleElement.style.transform = 'scale(1)';
+                    bubbleElement.style.transition = 'transform 0.3s ease';
+                }, 10);
+            },
+
+            getBubbleText(type) {
+                const texts = {
+                    'if': 'SE [condição]',
+                    'context': 'CONTEXTO [descrição]',
+                    'then': 'ENTÃO [ação]',
+                    'else': 'SENÃO [ação alternativa]',
+                    'move-character': 'Mover Personagem',
+                    'change-focus': 'Mudar Foco',
+                    'scenario': 'Cenário',
+                    'hide-character': 'Esconder Personagem',
+                    'character': 'Personagem()',
+                    'scenario-config': 'Cenário()',
+                    'change-expression': 'Mudar Expressão',
+                    'bring-character': 'Trazer Personagem',
+                    'new-chapter': 'Novo Capítulo',
+                    'create-route': 'Criar Rota',
+                    'dialogue': 'Diálogo',
+                    'stop-all': 'Parar Tudo'
+                };
+                
+                return texts[type] || type;
+            },
+
+            loadUserData() {
+                const userData = localStorage.getItem('flowstory_user');
+                if (userData) {
+                    this.state.currentUser = JSON.parse(userData);
+                    this.updateUserUI();
+                }
+            },
+
+            updateUserUI() {
+                const userInfo = document.getElementById('user-info');
+                if (this.state.currentUser) {
+                    userInfo.innerHTML = `
+                        <span>👤 ${this.state.currentUser.username}</span>
+                        <button onclick="FlowStoryApp.logout()" class="btn-primary" style="padding: 8px 15px; font-size: 12px;">Sair</button>
+                    `;
+                }
+            },
+
+            loadStories() {
+                const storiesData = localStorage.getItem('flowstory_stories');
+                if (storiesData) {
+                    this.state.stories = JSON.parse(storiesData);
+                }
+            },
+
+            startAutoSave() {
+                this.state.autoSaveInterval = setInterval(() => {
+                    if (this.state.currentStory) {
+                        this.saveCurrentStory();
+                    }
+                }, 15000); // 15 segundos
+            },
+
+            saveCurrentStory() {
+                if (!this.state.currentStory) return;
+                
+                const timestamp = new Date().toLocaleString();
+                console.log('💾 Story salva automaticamente:', timestamp);
+                
+                // Aqui você implementaria o salvamento real
+            },
+
+            logout() {
+                this.state.currentUser = null;
+                localStorage.removeItem('flowstory_user');
+                this.updateUserUI();
+                showScreen('main-menu');
+                alert('Você saiu da sua conta.');
+            }
+        };
+
+        // Funções globais de navegação
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function openTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function openProfileTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Funções do Editor
+        function saveStory() {
+            alert('💾 História salva com sucesso!');
+        }
+
+        function showPreview() {
+            alert('👁️ Abrindo preview da história...');
+        }
+
+        function clearWorkspace() {
+            const workspace = document.getElementById('workspace-area');
+            if (confirm('Tem certeza que quer limpar a mesa de trabalho?')) {
+                workspace.innerHTML = '<p class="workspace-placeholder">Arraste as bolhas para esta área</p>';
+            }
+        }
+
+        function testStory() {
+            alert('▶️ Testando história...');
+        }
+
+        function exportStory() {
+            showScreen('export');
+        }
+
+        // Funções de Exportação
+        function exportHTML() {
+            alert('🌐 Exportando como HTML...');
+        }
+
+        function exportAPK() {
+            alert('🤖 Exportando como APK...');
+        }
+
+        function exportEXE() {
+            alert('💻 Exportando como EXE...');
+        }
+
+        function exportMP4() {
+            alert('🎬 Exportando como MP4...');
+        }
+
+        // Funções de Login/Convite
+        function doLogin() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!username || !password) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+            
+            // Simular login
+            FlowStoryApp.state.currentUser = {
+                username: username,
+                email: username.includes('@') ? username : null
+            };
+            
+            localStorage.setItem('flowstory_user', JSON.stringify(FlowStoryApp.state.currentUser));
+            FlowStoryApp.updateUserUI();
+            
+            showScreen('main-menu');
+            alert('🎉 **Pronto! Você entrou na Flow**\n\nSeja bem-vinda[o] de volta!');
+        }
+
+        function doInvite() {
+            const nick = document.getElementById('invite-nick').value;
+            const password = document.getElementById('invite-password').value;
+            const email = document.getElementById('invite-email').value;
+            
+            if (!nick || !password || !email) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+            
+            // Simular envio de convite
+            setTimeout(() => {
+                alert(`📨 **Convite enviado!**\n\nUm código único foi enviado para:\n${email}\n\nVerifique sua caixa de entrada.`);
+                showScreen('login');
+            }, 1000);
+        }
+
+        // Funções da Biblioteca
+        function openStory(storyId) {
+            alert(`Abrindo história ${storyId}...`);
+            showScreen('editor');
+        }
+
+        function createNewStory() {
+            FlowStoryApp.state.currentStory = {
+                id: Date.now().toString(),
+                title: 'Nova História',
+                created: new Date().toISOString(),
+                bubbles: []
+            };
+            
+            showScreen('editor');
+            alert('Nova história criada! Comece arrastando bolhas para a mesa de trabalho.');
+        }
+
+        // Inicializar app quando DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            FlowStoryApp.init();
+        });
+
+        // Calcular uso de storage (simulado)
+        setInterval(() => {
+            const used = Math.floor(Math.random() * 1000) + 100;
+            document.getElementById('storage-used').textContent = `${used}KB`;
+        }, 5000);
+    </script>
+</body>
+</html>
